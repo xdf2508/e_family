@@ -1,0 +1,26 @@
+<!-- RoomCard组件 - 微信小程序版本 -->
+<view class="room-card">
+  <view class="room-image">
+    <image src="{{room.image}}" mode="aspectFill" bind:tap="onBook"></image>
+    <view class="room-rating">
+      <text>{{room.rating}}</text>
+    </view>
+  </view>
+  
+  <view class="room-info">
+    <view class="room-header">
+      <text class="room-name">{{room.name}}</text>
+      <text class="room-price">¥{{room.price}}</text>
+    </view>
+    
+    <text class="room-description">{{room.description}}</text>
+    
+    <view class="room-tags">
+      <block wx:for="{{room.tags}}" wx:key="index">
+        <text class="tag-item">{{item}}</text>
+      </block>
+    </view>
+
+    <button class="book-button" bind:tap="onBook">立即预定</button>
+  </view>
+</view>

@@ -1,0 +1,88 @@
+# 上传服务端代码到GitHub仓库指南
+
+要将服务端代码上传到您的GitHub仓库 (https://github.com/xdf2508/e_family.git)，请按照以下步骤操作：
+
+## 1. 克隆您的GitHub仓库
+
+打开命令行工具，执行以下命令：
+
+```bash
+git clone https://github.com/xdf2508/e_family.git
+cd e_family
+```
+
+## 2. 将服务端代码复制到仓库中
+
+如果您已经将服务端代码放在了 e_family 目录中，可以跳过这一步。
+否则，请将 D:\Downloads\e-family-homestay-(meizhou-island)\e_family\server 中的文件复制到您的 e_family 仓库目录中。
+
+## 3. 创建一个 server 目录并将所有服务端文件移动进去
+
+```bash
+mkdir server
+# 将所有服务端相关文件移动到 server 目录
+mv package*.json server/
+mv server.js server/
+mv middleware/ server/
+mv utils/ server/
+mv .env server/
+mv README.md server/
+mv CONFIG.md server/
+```
+
+## 4. 初始化Git仓库（如果尚未初始化）
+
+```bash
+git init
+git remote add origin https://github.com/xdf2508/e_family.git
+```
+
+## 5. 检查和添加文件
+
+```bash
+git add .
+```
+
+## 6. 创建 .gitignore 文件
+
+创建一个 .gitignore 文件，内容如下：
+
+```
+node_modules/
+.env
+uploads/
+*.log
+.DS_Store
+```
+
+## 7. 提交更改
+
+```bash
+git add .gitignore
+git commit -m "Add Node.js server for e-family-homestay project"
+```
+
+## 8. 推送到GitHub
+
+```bash
+git push -u origin main
+```
+
+## 9. 如果您遇到任何问题
+
+- 确保您有仓库的写入权限
+- 如果仓库不为空且与您的本地更改冲突，您可能需要先 pull：
+  ```bash
+  git pull origin main --allow-unrelated-histories
+  ```
+
+- 如果您使用SSH密钥，请将上面的HTTPS URL替换为SSH URL：
+  ```bash
+  git remote set-url origin git@github.com:xdf2508/e_family.git
+  ```
+
+## 10. 验证上传
+
+访问 https://github.com/xdf2508/e_family.git 验证文件已成功上传
+
+注意：请确保您的 .env 文件不包含任何敏感信息，或者将 .env 添加到 .gitignore 文件中，以避免泄露敏感配置。

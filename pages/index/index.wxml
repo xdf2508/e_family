@@ -1,0 +1,543 @@
+<!-- pages/index/index.wxml -->
+<view class="container">
+  <!-- 主页视图 -->
+  <view wx:if="{{view == 'home'}}" class="home-view">
+    <view class="bg-image" style="background-image: url({{bgImage}}); opacity: {{isRefreshing ? 0.5 : 0.8}};">
+      <view class="loading-indicator" wx:if="{{isRefreshing}}">
+        <view class="spinner"></view>
+      </view>
+    </view>
+    
+    <view class="gradient-overlay">
+      <view class="header">
+        <view class="date-section">
+          <text class="date">{{currentDate}}</text>
+          <text class="month-year">{{currentMonth}}. {{currentYear}}</text>
+        </view>
+        <view class="location-tag" bind:tap="handleMapNavigation">
+          <text class="location-icon">📍</text> 湄洲岛 · 妈祖故里
+        </view>
+      </view>
+      
+      <view class="content-section">
+        <view class="quote-section">
+          <text class="quote-text" style="opacity: {{isRefreshing ? 0 : 1}}">" {{dailyQuote}} "</text>
+        </view>
+        
+        <view class="action-buttons">
+          <button class="action-btn" bind:tap="handleRefresh" disabled="{{isRefreshing}}">
+            <text class="btn-icon">🔄</text>
+            <text class="btn-text">换一换</text>
+          </button>
+          <button class="action-btn" bind:tap="handleShare">
+            <text class="btn-icon">📤</text>
+            <text class="btn-text">分享</text>
+          </button>
+          <button class="action-btn" bind:tap="handleSetWallpaper">
+            <text class="btn-icon">🖼️</text>
+            <text class="btn-text">设为壁纸</text>
+          </button>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 房间视图 -->
+  <view wx:elif="{{view == 'rooms'}}" class="rooms-view">
+    <view class="rooms-container">
+      <swiper class="rooms-swiper" 
+              indicator-dots="{{false}}" 
+              autoplay="{{false}}" 
+              circular="{{true}}"
+              bindchange="onRoomChange"
+              vertical="{{true}}"
+              current="{{currentIndex}}"
+              style="height: 100%;">
+        <block wx:for="{{rooms}}" wx:key="id">
+          <swiper-item class="room-item">
+            <image src="{{item.image}}" mode="aspectFill" class="room-image"></image>
+            
+            <view class="room-overlay">
+              <view class="room-tags">
+                <text class="tag">精选</text>
+                <view class="rating">
+                  <text class="star">⭐</text> {{item.rating}}
+                </view>
+              </view>
+              
+              <text class="room-name">{{item.name}}</text>
+              <text class="room-desc">{{item.description}}</text>
+              
+              <view class="room-features">
+                <block wx:for="{{item.tags}}" wx:key="index">
+                  <text class="feature-tag">{{item}}</text>
+                </block>
+              </view>
+
+              <view class="room-footer">
+                <view>
+                  <text class="price-label">每晚</text>
+                  <view class="price">
+                    <text class="price-unit">¥</text>{{item.price}}
+                  </view>
+                </view>
+                <button class="book-btn" bind:tap="handleBookRoom" data-room="{{item}}">立即预订</button>
+              </view>
+            </view>
+            
+            <!-- 滚动提示 -->
+            <view wx:if="{{index < rooms.length - 1}}" class="scroll-hint">
+              <text>↑</text>
+            </view>
+          </swiper-item>
+        </block>
+      </swiper>
+      
+      <!-- 指示器 -->
+      <view class="room-indicator">
+        <block wx:for="{{rooms}}" wx:for-index="idx" wx:key="id">
+          <view class="indicator-dot {{currentIndex == idx ? 'active' : ''}}" data-index="{{idx}}" bind:tap="switchToRoom"></view>
+        </block>
+      </view>
+    </view>
+  </view>
+
+  <!-- 订单视图 -->
+  <view wx:elif="{{view == 'orders'}}" class="orders-view">
+    <text class="section-title">您的行程</text>
+    
+    <view wx:if="{{!user.isLoggedIn}}" class="login-prompt">
+      <text class="login-icon">🔐</text>
+      <text class="login-text">登录后查看旅途足迹</text>
+      <button class="login-btn" bind:tap="handleLogin" data-method="wechat">立即登录</button>
+    </view>
+    <view wx:elif="{{orders.length == 0}}" class="empty-orders">
+      <text class="empty-icon">🗓️</text>
+      <text>暂无行程，世界这么大，去看看吧</text>
+    </view>
+    <view wx:else class="order-list">
+      <block wx:for="{{orders}}" wx:key="id">
+        <view class="order-item">
+          <view class="order-icon">🗓️</view>
+          <view class="order-content">
+            <view class="order-header">
+              <text class="order-name">{{item.roomName}}</text>
+              <text class="order-status {{item.status}}">{{item.status == 'confirmed' ? '待入住' : item.status}}</text>
+            </view>
+            <view class="order-footer">
+              <text class="order-date">入住日期</text>
+              <text class="order-date-value">{{item.date}}</text>
+              <text class="order-price">¥{{item.price}}</text>
+            </view>
+          </view>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <!-- 个人中心视图 -->
+  <view wx:elif="{{view == 'profile'}}" class="profile-view">
+    <view class="profile-header">
+      <button class="avatar-btn" open-type="chooseAvatar" bind:chooseavatar="handleChooseAvatar" wx:if="{{user.isLoggedIn}}">
+        <image src="{{user.avatar || '/images/default-avatar.png'}}" class="user-avatar"></image>
+      </button>
+      <view class="avatar-btn" bind:tap="handleLogin" data-method="wechat" wx:else>
+        <image src="/images/default-avatar.png" class="user-avatar" style="opacity: 0.6;"></image>
+      </view>
+      <view wx:if="{{user.isLoggedIn}}" class="user-info">
+        <input type="nickname" value="{{user.name}}" bindinput="handleNicknameInput" bindblur="saveNickname" class="user-name-input" />
+        <text class="user-phone">{{user.phone}}</text>
+      </view>
+      <view wx:else class="user-login-prompt">
+        <text class="login-text">未登录</text>
+        <text class="login-desc">点击头像登录开启专属旅程</text>
+      </view>
+    </view>
+
+    <view class="profile-stats">
+      <view class="stat-item">
+        <text class="stat-value">{{user.isLoggedIn ? (user.points || 0) : '—'}}</text>
+        <text class="stat-label">积分</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-value">{{user.isLoggedIn ? (user.coupons || 0) : '—'}}</text>
+        <text class="stat-label">优惠券</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-value">{{user.isLoggedIn ? (favorites.length || 0) : '—'}}</text>
+        <text class="stat-label">收藏</text>
+      </view>
+    </view>
+
+    <view class="profile-menu">
+      <view class="menu-item" bind:tap="checkLoginAndNavigate" data-view="favorites">
+        <text class="menu-icon">❤️</text>
+        <text class="menu-label">我的收藏</text>
+        <text class="menu-arrow">></text>
+      </view>
+      <view class="menu-item" bind:tap="handleMapNavigation">
+        <text class="menu-icon">📍</text>
+        <text class="menu-label">民宿导航</text>
+        <text class="menu-value">湄洲岛环岛路</text>
+        <text class="menu-arrow">></text>
+      </view>
+      <view class="menu-item" bind:tap="handleNavChangeAndClose" data-view="settings">
+        <text class="menu-icon">⚙️</text>
+        <text class="menu-label">设置</text>
+        <text class="menu-arrow">></text>
+      </view>
+      <view class="menu-item" bind:tap="handleNavChangeAndClose" data-view="about">
+        <text class="menu-icon">ℹ️</text>
+        <text class="menu-label">关于我们</text>
+        <text class="menu-arrow">></text>
+      </view>
+    </view>
+
+    <button wx:if="{{user.isLoggedIn}}" class="logout-btn" bind:tap="handleLogout">退出当前账号</button>
+  </view>
+
+  <!-- 我的收藏视图 -->
+  <view wx:elif="{{view == 'favorites'}}" class="favorites-view">
+    <text class="section-title">我的收藏</text>
+    
+    <view wx:if="{{!user.isLoggedIn}}" class="login-prompt">
+      <text class="login-icon">🔐</text>
+      <text class="login-text">登录后查看您的收藏</text>
+      <button class="login-btn" bind:tap="handleLogin" data-method="wechat">立即登录</button>
+    </view>
+    <view wx:elif="{{favorites && favorites.length == 0}}" class="empty-favorites">
+      <text class="empty-icon">❤️</text>
+      <text>暂无收藏，发现喜欢的房源可以点心形图标收藏哦</text>
+    </view>
+    <view wx:else class="favorites-list">
+      <block wx:for="{{favorites}}" wx:key="id">
+        <view class="favorite-item">
+          <image src="{{item.image}}" class="favorite-image"></image>
+          <view class="favorite-content">
+            <view class="favorite-header">
+              <text class="favorite-name">{{item.name}}</text>
+              <text class="favorite-price">¥{{item.price}}</text>
+            </view>
+            <view class="favorite-footer">
+              <text class="favorite-rating">⭐ {{item.rating}}</text>
+              <text class="favorite-location">📍 {{item.location}}</text>
+            </view>
+          </view>
+          <button class="unfavorite-btn" bind:tap="handleUnfavorite" data-id="{{item.id}}">❤️</button>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <!-- 设置视图 -->
+  <view wx:elif="{{view == 'settings'}}" class="settings-view">
+    <text class="section-title">设置</text>
+    
+    <view class="settings-menu">
+      <view class="menu-item" bind:tap="toggleNotification">
+        <text class="menu-icon">🔔</text>
+        <text class="menu-label">消息通知</text>
+        <switch class="menu-switch" checked="{{notificationEnabled}}" />
+      </view>
+      <view class="menu-item" bind:tap="goToPrivacy">
+        <text class="menu-icon">🔒</text>
+        <text class="menu-label">隐私设置</text>
+        <text class="menu-arrow">></text>
+      </view>
+      <view class="menu-item" bind:tap="goToLanguage">
+        <text class="menu-icon">🌐</text>
+        <text class="menu-label">语言设置</text>
+        <text class="menu-value">{{language}}</text>
+        <text class="menu-arrow">></text>
+      </view>
+      <view class="menu-item" bind:tap="toggleTheme">
+        <text class="menu-icon">🎨</text>
+        <text class="menu-label">主题设置</text>
+        <text class="menu-value">{{theme}}</text>
+        <text class="menu-arrow">></text>
+      </view>
+      <view class="menu-item" bind:tap="goToAbout">
+        <text class="menu-icon">📱</text>
+        <text class="menu-label">关于我们</text>
+        <text class="menu-arrow">></text>
+      </view>
+      <view class="menu-item" bind:tap="goToFeedback">
+        <text class="menu-icon">❓</text>
+        <text class="menu-label">帮助与反馈</text>
+        <text class="menu-arrow">></text>
+      </view>
+    </view>
+    </view>
+  
+    <!-- 隐私设置视图 -->
+    <view wx:elif="{{view == 'privacy'}}" class="privacy-view">
+      <view class="privacy-header">
+        <text class="back-btn" bind:tap="goToSettings">←</text>
+        <text class="privacy-title">隐私设置</text>
+      </view>
+      
+      <view class="settings-menu">
+        <view class="menu-item">
+          <text class="menu-label">个人信息可见性</text>
+          <switch class="menu-switch" checked="{{profileVisibility}}" bind:change="toggleProfileVisibility" />
+        </view>
+        <view class="menu-item">
+          <text class="menu-label">手机号码保护</text>
+          <switch class="menu-switch" checked="{{phoneProtection}}" bind:change="togglePhoneProtection" />
+        </view>
+        <view class="menu-item">
+          <text class="menu-label">位置信息共享</text>
+          <switch class="menu-switch" checked="{{locationSharing}}" bind:change="toggleLocationSharing" />
+        </view>
+        <view class="menu-item">
+          <text class="menu-label">通讯录匹配</text>
+          <switch class="menu-switch" checked="{{contactMatching}}" bind:change="toggleContactMatching" />
+        </view>
+      </view>
+    </view>
+  
+    <!-- 语言设置视图 -->
+    <view wx:elif="{{view == 'language'}}" class="language-view">
+      <view class="language-header">
+        <text class="back-btn" bind:tap="goToSettings">←</text>
+        <text class="language-title">语言设置</text>
+      </view>
+      
+      <view class="language-options">
+        <view class="language-option {{language == '简体中文' ? 'selected' : ''}}" bind:tap="selectLanguage" data-lang="简体中文">
+          <text class="language-name">简体中文</text>
+          <text wx:if="{{language == '简体中文'}}" class="selected-icon">✓</text>
+        </view>
+        <view class="language-option {{language == '繁體中文' ? 'selected' : ''}}" bind:tap="selectLanguage" data-lang="繁體中文">
+          <text class="language-name">繁體中文</text>
+          <text wx:if="{{language == '繁體中文'}}" class="selected-icon">✓</text>
+        </view>
+        <view class="language-option {{language == 'English' ? 'selected' : ''}}" bind:tap="selectLanguage" data-lang="English">
+          <text class="language-name">English</text>
+          <text wx:if="{{language == 'English'}}" class="selected-icon">✓</text>
+        </view>
+      </view>
+    </view>
+  
+    <!-- 关于我们视图 -->
+    <view wx:elif="{{view == 'about'}}" class="about-view">
+      <view class="about-header">
+        <text class="back-btn" bind:tap="goToSettings">←</text>
+        <text class="about-title">关于我们</text>
+      </view>
+      
+      <view class="about-content">
+        <image src="/images/logo.png" class="about-logo" mode="aspectFit"></image>
+        <text class="about-name">e家人民宿</text>
+        <text class="about-description">致力于为用户提供高品质的民宿住宿体验，让每一次出行都成为美好的回忆。</text>
+        
+        <view class="about-info">
+          <view class="info-item">
+            <text class="info-label">版本</text>
+            <text class="info-value">v1.0.0</text>
+          </view>
+          <view class="info-item">
+            <text class="info-label">公司</text>
+            <text class="info-value">e家人民宿有限公司</text>
+          </view>
+          <view class="info-item">
+            <text class="info-label">客服电话</text>
+            <text class="info-value">400-123-4567</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  
+    <!-- 帮助与反馈视图 -->
+    <view wx:elif="{{view == 'feedback'}}" class="feedback-view">
+      <view class="feedback-header">
+        <text class="back-btn" bind:tap="goToSettings">←</text>
+        <text class="feedback-title">帮助与反馈</text>
+      </view>
+      
+      <view class="feedback-content">
+        <view class="feedback-section">
+          <text class="section-header">常见问题</text>
+          <view class="faq-item" bind:tap="showFAQ" data-question="如何预订房间">
+            <text class="faq-question">如何预订房间？</text>
+            <text class="faq-arrow">></text>
+          </view>
+          <view class="faq-item" bind:tap="showFAQ" data-question="如何取消订单">
+            <text class="faq-question">如何取消订单？</text>
+            <text class="faq-arrow">></text>
+          </view>
+          <view class="faq-item" bind:tap="showFAQ" data-question="退款政策">
+            <text class="faq-question">退款政策</text>
+            <text class="faq-arrow">></text>
+          </view>
+        </view>
+        
+        <view class="feedback-section">
+          <text class="section-header">意见反馈</text>
+          <textarea class="feedback-input" placeholder="请描述您遇到的问题或提出宝贵建议..." maxlength="500"></textarea>
+          <button class="submit-btn" bind:tap="submitFeedback">提交反馈</button>
+        </view>
+        
+        <view class="contact-section">
+          <text class="section-header">联系客服</text>
+          <view class="contact-methods">
+            <view class="contact-item" bind:tap="contactByPhone">
+              <text class="contact-icon">📞</text>
+              <text class="contact-text">客服热线：400-123-4567</text>
+            </view>
+            <view class="contact-item" bind:tap="contactByWechat">
+              <text class="contact-icon">💬</text>
+              <text class="contact-text">在线客服</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 预订视图 -->
+    <view wx:if="{{view == 'booking' && selectedRoom}}" class="booking-view">    <view class="booking-header">
+      <image src="{{selectedRoom.image}}" class="booking-room-image"></image>
+      <button class="back-btn" bind:tap="goBack">⬅️</button>
+    </view>
+
+    <view class="booking-content">
+      <view class="room-info">
+        <text class="room-name">{{selectedRoom.name}}</text>
+        <view class="room-features">
+          <text class="feature-badge">即时确认</text>
+          <text class="feature-badge">免押金</text>
+        </view>
+        <text class="room-price">¥{{selectedRoom.price}}</text>
+      </view>
+
+      <view class="date-selection">
+        <view class="date-item">
+          <text class="date-label">入住</text>
+          <text class="date-value">{{checkInDate}}</text>
+          <text class="date-day">周{{checkInDay}}</text>
+        </view>
+        <view class="date-divider">
+          <text class="nights-count">共1晚</text>
+        </view>
+        <view class="date-item">
+          <text class="date-label">离店</text>
+          <text class="date-value">{{checkOutDate}}</text>
+          <text class="date-day">周{{checkOutDay}}</text>
+        </view>
+      </view>
+
+      <view class="user-info-section">
+        <text class="section-title">入住信息</text>
+        <view class="input-row">
+          <text class="input-label">住客姓名</text>
+          <input class="input-field" value="{{user.name}}" />
+        </view>
+        <view class="input-row">
+          <text class="input-label">联系手机</text>
+          <view class="input-value">
+            <text>{{user.phone}}</text>
+            <text class="default-tag">默认</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="price-details">
+        <text class="section-title">费用明细</text>
+        <view class="price-row">
+          <text>房费 (1晚)</text>
+          <text>¥{{selectedRoom.price}}</text>
+        </view>
+        <view class="price-row">
+          <text>服务费</text>
+          <text>¥0</text>
+        </view>
+        <view class="price-row">
+          <text>优惠券</text>
+          <text class="coupon-text">无可用优惠券 ></text>
+        </view>
+        <view class="total-row">
+          <text>总计</text>
+          <text class="total-price">¥{{selectedRoom.price}}</text>
+        </view>
+      </view>
+
+      <view class="booking-policy">
+        <text class="policy-icon">🕒</text>
+        <text>14:00 后办理入住，12:00 前办理退房。预订成功后不可免费取消。</text>
+      </view>
+    </view>
+
+    <view class="booking-footer">
+      <view class="total-amount">
+        <text class="amount-label">实付款</text>
+        <text class="amount-value">¥{{selectedRoom.price}}</text>
+      </view>
+      <button class="confirm-btn" bind:tap="confirmBooking">立即支付</button>
+    </view>
+  </view>
+
+  <!-- 浮动菜单按钮 -->
+  <view wx:if="{{view != 'booking'}}" class="floating-menu">
+    <view class="menu-toggle" bind:tap="toggleMenu">
+      {{isMenuOpen ? '❌' : '☰'}}
+    </view>
+  </view>
+  
+  <!-- 底部弹出菜单 -->
+  <view class="bottom-sheet {{isMenuOpen ? 'show' : ''}}">
+    <view class="bottom-sheet-content" bind:tap="handleNavChangeAndClose">
+      <view class="menu-item-cell" bind:tap="handleNavChangeAndClose" data-view="home">
+        <text class="bottom-sheet-menu-icon">🏠</text>
+        <text class="bottom-sheet-menu-text">首页</text>
+      </view>
+      <view class="menu-item-cell" bind:tap="handleNavChangeAndClose" data-view="rooms">
+        <text class="bottom-sheet-menu-icon">🛏️</text>
+        <text class="bottom-sheet-menu-text">客房</text>
+      </view>
+      <view class="menu-item-cell" bind:tap="handleNavChangeAndClose" data-view="orders">
+        <text class="bottom-sheet-menu-icon">📅</text>
+        <text class="bottom-sheet-menu-text">订单</text>
+      </view>
+      <view class="menu-item-cell" bind:tap="handleNavChangeAndClose" data-view="favorites">
+        <text class="bottom-sheet-menu-icon">❤️</text>
+        <text class="bottom-sheet-menu-text">收藏</text>
+      </view>
+      <view class="menu-item-cell" bind:tap="handleNavChangeAndClose" data-view="settings">
+        <text class="bottom-sheet-menu-icon">⚙️</text>
+        <text class="bottom-sheet-menu-text">设置</text>
+      </view>
+      <view class="menu-item-cell" bind:tap="handleNavChangeAndClose" data-view="profile">
+        <text class="bottom-sheet-menu-icon">👤</text>
+        <text class="bottom-sheet-menu-text">我的</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 登录模态框 -->
+  <view wx:if="{{showLoginModal}}" class="login-modal">
+    <view class="modal-overlay" bind:tap="closeLoginModal"></view>
+    <view class="modal-content">
+      <text class="modal-title">欢迎回家</text>
+      <text class="modal-subtitle">e家人民宿 · 遇见湄洲</text>
+      
+      <button class="wechat-login-btn" bind:tap="handleWechatLoginWithUserInfo" data-method="wechat">
+        <text class="login-icon">🔐</text>
+        微信一键登录
+      </button>
+      <button class="phone-login-btn" open-type="getPhoneNumber" bind:getphonenumber="handleGetPhoneNumber">
+        <text class="login-icon">📱</text>
+        手机号快速登录
+      </button>
+      
+      <view class="login-tips">
+        <text class="tips-text">登录即表示同意</text>
+        <text class="tips-link">《用户协议》</text>
+        <text class="tips-text">和</text>
+        <text class="tips-link">《隐私政策》</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 提示信息 -->
+  <view wx:if="{{toastMsg}}" class="toast">{{toastMsg}}</view>
+</view>
