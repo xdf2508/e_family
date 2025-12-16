@@ -1,31 +1,20 @@
+// 正确的服务端逻辑：创建HTTP服务器并监听端口
 const http = require('http');
 
-const options = {
-  host: 'localhost',
-  port: '3000',
-  path: '/',
-  method: 'GET',
-  timeout: 5000
-};
-
-const req = http.request(options, (res) => {
-  console.log(`状态码: ${res.statusCode}`);
-  res.on('data', (chunk) => {
-    console.log(`响应主体: ${chunk}`);
-  });
-  res.on('end', () => {
-    console.log('响应结束');
-  });
+// 定义接口响应逻辑（可替换为你的微信登录接口）
+const server = http.createServer((req, res) => {
+  // 设置响应头
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  // 示例接口响应（可替换为你的wechat-login逻辑）
+  if (req.url === '/api/user/wechat-login' && req.method === 'POST') {
+    res.end(JSON.stringify({ code: 200, msg: '服务端接口正常' }));
+  } else {
+    res.end(JSON.stringify({ code: 404, msg: '接口不存在' }));
+  }
 });
 
-req.on('error', (e) => {
-  console.error(`请求遇到问题: ${e.message}`);
-  console.log('服务器可能未运行或端口被占用');
+// 监听Vercel分配的端口（必须用process.env.PORT）
+const port = process.env.PORT || 3000;
+server.listen(port, () => {
+  console.log(`服务端已启动，监听端口：${port}`);
 });
-
-req.on('timeout', () => {
-  console.log('请求超时');
-  req.destroy();
-});
-
-req.end();
